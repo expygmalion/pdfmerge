@@ -15,6 +15,7 @@ A command-line tool to merge PDF files from a directory.
 ### Build
 
 ```bash
+cd ~/Scripts/pdfmerge
 ./build.sh
 ```
 
@@ -23,6 +24,18 @@ A command-line tool to merge PDF files from a directory.
 ```bash
 mkdir -p ~/.local/bin && cp dist/pdfmerge ~/.local/bin/
 ```
+
+### Add to fish shell
+
+Add this to `~/.config/fish/config.fish`:
+
+```fish
+function pdfmerge
+    exec ~/.local/bin/pdfmerge $argv
+end
+```
+
+Then restart fish or run `source ~/.config/fish/config.fish`.
 
 ### Usage
 
