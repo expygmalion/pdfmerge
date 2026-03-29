@@ -6,6 +6,7 @@ A command-line tool to merge PDF files from a directory.
 
 - **Sort**: Alphabetically ascending (`-sA`) or descending (`-sD`)
 - **Filter**: Glob pattern matching (`-p "Lecture*.pdf"`)
+- **Exclude**: Skip files matching patterns (`-x "*Notes.pdf"`)
 - **Recursive**: Include subdirectories (`-r`) or per-folder pattern (`-rf`)
 - **Preview**: Dry-run mode to see what would be merged
 - **Portable**: Single ~10MB executable, no Python required
@@ -46,6 +47,12 @@ pdfmerge
 # Merge lecture PDFs in order
 pdfmerge -d ./lectures -sA -p "Lecture*.pdf" -o all_lectures -v
 
+# Exclude files with "Notes" in the name
+pdfmerge -sA -p "Lecture*.pdf" -x "*Notes*" -o main_only
+
+# Multiple exclude patterns
+pdfmerge -x "*Notes.pdf" -x "draft*.pdf" -x "*old*"
+
 # Preview without merging
 pdfmerge -r --dry-run -v
 
@@ -62,6 +69,7 @@ pdfmerge -rf -p "*Notes.pdf" -o notes_only
 | `-sA` | Sort ascending (A→Z) |
 | `-sD` | Sort descending (Z→A) |
 | `-p, --pattern` | Glob pattern filter |
+| `-x, --exclude` | Exclude pattern (can be used multiple times) |
 | `-r, --recursive` | Include subdirectories |
 | `-rf` | Recursive + pattern per folder |
 | `-v, --verbose` | Show files being merged |

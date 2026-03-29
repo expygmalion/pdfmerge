@@ -11,6 +11,7 @@ Options:
     -sA                   Sort ascending alphabetically (A→Z)
     -sD                   Sort descending alphabetically (Z→A)
     -p, --pattern PAT     Glob pattern to filter files (e.g., "Lecture*.pdf")
+    -x, --exclude PAT     Exclude files matching pattern (can be used multiple times)
     -r, --recursive       Include PDFs from subdirectories
     -rf                   Recursive + apply pattern per folder
     -v, --verbose         Show files being merged
@@ -38,6 +39,7 @@ Examples:
   pdfmerge -d ./lectures -o combined
   pdfmerge -sA -p "Lecture*.pdf" -v
   pdfmerge -rf -p "*.pdf" -o all_lectures
+  pdfmerge -x "*Notes.pdf" -x "draft*.pdf"
         """,
     )
     parser.add_argument("-d", "--directory", type=str, default=".",
@@ -50,6 +52,8 @@ Examples:
                         help="Sort descending alphabetically (Z→A)")
     parser.add_argument("-p", "--pattern", type=str, default="*.pdf",
                         help='Glob pattern to filter files (default: "*.pdf")')
+    parser.add_argument("-x", "--exclude", action="append", default=[],
+                        metavar="PAT", help="Exclude files matching pattern (can be used multiple times)")
     parser.add_argument("-r", "--recursive", action="store_true",
                         help="Include PDFs from subdirectories")
     parser.add_argument("-rf", action="store_true",
@@ -68,25 +72,33 @@ def ensure_pdf_extension(filename: str) -> str:
     return filename
 
 
-def collect_pdfs(directory: Path, pattern: str, recursive: bool, rf_mode: bool) -> list[Path]:
+def is_excluded(filename: str, exclude_patterns: list[str]) -> bool:
+    """Check if filename matches any exclude pattern."""
+    for pattern in exclude_patterns:
+        if fnmatch.fnmatch(filename, pattern):
+            return True
+    return False
+
+
+def collect_pdfs(directory: Path, pattern: str, recursive: bool, rf_mode: bool, exclude_patterns: list[str]) -> list[Path]:
     """Collect PDF files based on options."""
     pdfs = []
 
     if rf_mode:
         # Recursive + pattern per folder
         for root, dirs, files in os.walk(directory):
-            folder_pdfs = [f for f in files if fnmatch.fnmatch(f, pattern)]
+            folder_pdfs = [f for f in files if fnmatch.fnmatch(f, pattern) and not is_excluded(f, exclude_patterns)]
             pdfs.extend(Path(root) / f for f in sorted(folder_pdfs))
     elif recursive:
         # Simple recursive - all matching PDFs
         for root, dirs, files in os.walk(directory):
             for f in files:
-                if fnmatch.fnmatch(f, pattern):
+                if fnmatch.fnmatch(f, pattern) and not is_excluded(f, exclude_patterns):
                     pdfs.append(Path(root) / f)
     else:
         # Flat directory only
         for f in directory.iterdir():
-            if f.is_file() and fnmatch.fnmatch(f.name, pattern):
+            if f.is_file() and fnmatch.fnmatch(f.name, pattern) and not is_excluded(f.name, exclude_patterns):
                 pdfs.append(f)
 
     return pdfs
@@ -117,17 +129,21 @@ def main():
         output_file = directory / output_file
 
     # Collect and sort PDFs
-    pdfs = collect_pdfs(directory, args.pattern, args.recursive, args.rf)
+    pdfs = collect_pdfs(directory, args.pattern, args.recursive, args.rf, args.exclude)
     pdfs = sort_pdfs(pdfs, args.sA, args.sD)
 
     if not pdfs:
         print(f"No PDF files found matching '{args.pattern}' in '{directory}'.", file=sys.stderr)
+        if args.exclude:
+            print(f"Excluded patterns: {', '.join(args.exclude)}", file=sys.stderr)
         sys.exit(1)
 
     # Verbose output
     if args.verbose:
         print(f"Directory: {directory}")
         print(f"Pattern: {args.pattern}")
+        if args.exclude:
+            print(f"Excluded: {', '.join(args.exclude)}")
         print(f"Output: {output_file}")
         print(f"Files to merge ({len(pdfs)}):")
         for i, pdf in enumerate(pdfs, 1):
